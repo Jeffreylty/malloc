@@ -4,14 +4,13 @@
 void *mm_realloc(void *ptr, size_t size)
 {
     size_t asize = size;    /* Size of new block */
-    int extendsize;         /* Size to extend heap */
-    int buffersize;         /* Size of block buffer */
-    int remainsize;         /* Size of reminder */
-    void *newp = bp;        /* Ptr to the result block */
+    void *newptr = ptr;        /* Ptr to the result block */
 
     /* Ignore spurious requests */
-    if (size == 0)
+    if (size == 0) {
+        mm_free(ptr);
         return NULL;
+     }
 
     /* Adjust block size to include overhead and alignment reqs. */
     if (asize <= DSIZE) {
