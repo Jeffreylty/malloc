@@ -92,7 +92,7 @@ void **free_list;   /* List of free pointer */
 static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
-static void place(void *bp, size_t size);
+static void *place(void *bp, size_t size);
 static void insert(void *bp, size_t size);
 static void delete(void *bp);
 
@@ -174,7 +174,7 @@ void *mm_malloc(size_t size)
     
     /* Search the free list for a fit */
     if ((bp = find_fit(asize)) != NULL) {
-        place(bp,asize);
+        bp = place(bp,asize);
         return bp;
     }
     
@@ -183,7 +183,7 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize)) == NULL) {
         return NULL;
     }
-    place(bp,asize);
+    bp = place(bp,asize);
     return bp;
 }
 
@@ -288,21 +288,30 @@ return newptr;
 }
 
 /* place the requested block at the beginning of the free block, splitting only if the size of the remainder would equal or exceed the mini- mum block size. */
-static void place(void *bp, size_t size){
+static void *place(void *bp, size_t size){
 
     size_t temp = GET_SIZE(HDRP(bp));
-        delete(bp);
+    size_t diff = temp - size;
+    delete(bp);
     
-    if((temp - size) < 2 * DSIZE){
+    if(diff < 2 * DSIZE){
         PUT(HDRP(bp), PACK(temp, 1));
         PUT(FTRP(bp), PACK(temp, 1));
-    }else{
+    }else if(size >= 100) {
+	PUT(HDRP(bp),PACK((diff), 0));
+        PUT(FTRP(bp),PACK((diff), 0));
+        PUT(HDRP(NEXT_BLKP(bp)),PACK(size, 1));
+        PUT(FTRP(NEXT_BLKP(bp)),PACK(size, 1));
+	insert(bp, diff);
+	return NEXT_BLKP(bp);
+    }else {
         PUT(HDRP(bp),PACK(size, 1));
         PUT(FTRP(bp),PACK(size, 1));
-        PUT(HDRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
-        PUT(FTRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
-        insert(NEXT_BLKP(bp), (temp - size));
+        PUT(HDRP(NEXT_BLKP(bp)),PACK((diff), 0));
+        PUT(FTRP(NEXT_BLKP(bp)),PACK((diff), 0));
+        insert(NEXT_BLKP(bp), diff);
     }
+    return bp;
 }
 
 /* Add the free block to the free list */
