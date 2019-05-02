@@ -244,6 +244,20 @@ static void *find_fit(size_t asize){
 }
 
 
+/* place the requested block at the beginning of the free block, splitting only if the size of the remainder would equal or exceed the mini- mum block size. */
+static void *place(void *bp, size_t size){
+    size_t temp = GET_SIZE(HDRP(bp));
+    
+    if((temp - size) < 2 * DSIZE){
+        PUT(HDRP(bp), PACK(GET_SIZE(HDRP(bp)), 1));
+        PUT(FTRP(bp), PACK(GET_SIZE(HDRP(bp)), 1));
+    }else{
+        PUT(HDRP(NEXT_BLKP(bp)),PACK(temp, 1));
+        PUT(FTRP(NEXT_BLKP(bp)),PACK(temp, 1));
+    }
+}
+
+
 
 
 
