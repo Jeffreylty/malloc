@@ -50,6 +50,7 @@ team_t team = {
 #define CHUNKSIZE (1<<12)   /* Extend heap by this amount (bytes) */
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 /* Pack a size and allocated bit into a word */
 #define PACK(size, alloc) ((size) | (alloc))
@@ -81,7 +82,7 @@ team_t team = {
 /* Set the value stored in p into ptr */
 #define PUT_PTR(p, ptr) (*(unsigned int *)p = (unsigned int )ptr )
 
-#define MAX_list 32
+#define MAX_list 20
 
 /* Variables */
 void * heap_listp;
@@ -131,7 +132,7 @@ static void *extend_heap(size_t words){
     size_t size;
     
     /* Allocate an even number of words to maintain alignment*/
-    size = (words % 2) ? (words+1) * WSIZE : words * WSIZE;
+    size = ALIGN(words);;
     if ((long)(bp = mem_sbrk(size)) == -1) {
         return NULL;
     }
@@ -155,7 +156,7 @@ static void *extend_heap(size_t words){
 void *mm_malloc(size_t size)
 {
 
-    size_t asize; /* Adjusted block size */
+    size_t asize= size +8; /* Adjusted block size */
     size_t extendsize; /* Amount to extend heap if no fit*/
     void *bp = NULL;
     
@@ -168,7 +169,7 @@ void *mm_malloc(size_t size)
     if (size <= DSIZE) {
         asize = 2*DSIZE;
     }else{
-        asize = DSIZE * ((size +(DSIZE) + (DSIZE - 1)) / DSIZE);
+        asize = ALIGN(size+DSIZE);
     }
     
     /* Search the free list for a fit */
@@ -179,7 +180,7 @@ void *mm_malloc(size_t size)
     
     /* No fit found. Get more menmory and place the block */
     extendsize = MAX(asize,CHUNKSIZE);
-    if ((bp = extend_heap(extendsize/WSIZE)) == NULL) {
+    if ((bp = extend_heap(extendsize)) == NULL) {
         return NULL;
     }
     place(bp,asize);
@@ -249,14 +250,9 @@ void *mm_realloc(void *ptr, size_t size)
     
     // If size == 0 then this is just free, and we return NULL
     if (size == 0) {
-        mm_free(ptr);
         return NULL;
     }
-    
-    // If oldptr is NULL, then this is just malloc
-    if(ptr == NULL) {
-        return mm_malloc(size);
-    }
+
     
     // Adjust block size to include overhead and alignment reqs
     if (asize <= DSIZE) {
@@ -264,17 +260,18 @@ void *mm_realloc(void *ptr, size_t size)
     }else {
         asize = ALIGN(size + DSIZE);
     }
-    
+     asize += (1<<7);
+
     // Return the original ptr if size is less than the original
-    if (GET_SIZE(HDRP(ptr)) >= size) {
+    if (GET_SIZE(HDRP(ptr)) >= asize) {
         return ptr;
         // When next block is free or is end
     }else if(!GET_ALLOC(HDRP(NEXT_BLKP(ptr))) || !GET_SIZE(HDRP(NEXT_BLKP(ptr)))) {
         // Need extend the block
-        int diff = GET_SIZE(HDRP(ptr)) + GET_SIZE(HDRP(NEXT_BLKP(ptr))) - size;
+        int diff = GET_SIZE(HDRP(ptr)) + GET_SIZE(HDRP(NEXT_BLKP(ptr))) - asize;
         if(diff < 0) {
-            if (extend_heap(MAX(-diff, 1<<12)) == NULL)   return NULL;
-            diff += MAX(-diff, 1<<12);
+            if (extend_heap(MAX(-diff, CHUNKSIZE)) == NULL)   return NULL;
+            diff += MAX(-diff, CHUNKSIZE);
         }
         
         delete(NEXT_BLKP(ptr));
@@ -282,12 +279,12 @@ void *mm_realloc(void *ptr, size_t size)
         PUT(FTRP(ptr), PACK(asize + diff, 1));
         // Use new free block
     }else {
-        newptr = mm_malloc(asize);
-        memcpy(newptr, ptr, GET_SIZE(HDRP(ptr)));
+        newptr = mm_malloc(asize-DSIZE);
+        memcpy(newptr, ptr, MIN(size, asize));
         mm_free(ptr);
     }
     
-    return newptr;
+return newptr;
 }
 
 /* place the requested block at the beginning of the free block, splitting only if the size of the remainder would equal or exceed the mini- mum block size. */
@@ -296,7 +293,7 @@ static void place(void *bp, size_t size){
     size_t temp = GET_SIZE(HDRP(bp));
         delete(bp);
     
-    if((temp - size) <= 2 * DSIZE){
+    if((temp - size) < 2 * DSIZE){
         PUT(HDRP(bp), PACK(temp, 1));
         PUT(FTRP(bp), PACK(temp, 1));
     }else{
