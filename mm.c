@@ -142,7 +142,7 @@ static void *extend_heap(size_t words){
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1)); /* Free block header */
     
     /* Add this free block into the segregated free list. */
-    insert(ptr, size);
+    insert(bp, size);
     
     /* Coalesce if the previous block was free*/
     return coalesce(bp);
@@ -280,16 +280,16 @@ void *mm_realloc(void *ptr, size_t size)
         int diff = GET_SIZE(HDRP(ptr)) + GET_SIZE(HDRP(NEXT_BLKP(ptr))) - size;
         if(diff < 0) {
             if (extend_heap(MAX(-diff, 1<<12)) == NULL)   return NULL;
-            diff += MAX(-remainder, 1<<12);
+            diff += MAX(-diff, 1<<12);
         }
         
-        delete_node(NEXT_BLKP(ptr));
+        delete(NEXT_BLKP(ptr));
         PUT(HDRP(ptr), PACK(asize + diff, 1));
         PUT(FTRP(ptr), PACK(asize + diff, 1));
         // Use new free block
     }else {
         newptr = mm_malloc(asize);
-        memcpy(new_block, ptr, GET_SIZE(HDRP(ptr)));
+        memcpy(newptr, ptr, GET_SIZE(HDRP(ptr)));
         mm_free(ptr);
     }
     
@@ -302,8 +302,8 @@ static void place(void *bp, size_t size){
     size_t temp = GET_SIZE(HDRP(bp));
     
     if((temp - size) < 2 * DSIZE){
-        PUT(HDRP(bp), PACK(temp), 1));
-        PUT(FTRP(bp), PACK(temp), 1));
+        PUT(HDRP(bp), PACK(temp, 1));
+        PUT(FTRP(bp), PACK(temp, 1));
     }else{
         PUT(HDRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
         PUT(FTRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
@@ -365,13 +365,13 @@ static void delete(void *bp){
     }
     
     if(PREV(bp) != NULL && NEXT(bp) != NULL){
-        PUT_PTR(NEXT_PTR(PREV(bp),NEXT(bp));
+        PUT_PTR(NEXT_PTR(PREV(bp)),NEXT(bp));
         PUT_PTR(PREV_PTR(NEXT(bp)),PREV(bp));
     }else if(PREV(bp) == NULL && NEXT(bp) != NULL){
-        PUT_PTR(PREV_PTR(NEXT(bp),NULL));
+        PUT_PTR(PREV_PTR(NEXT(bp)),NULL);
         free_list[pos] = NEXT(bp);
     }else if(PREV(bp) != NULL && NEXT(bp) == NULL){
-        PUT_PTR(NEXT_PTR(PREV(bp),NULL));
+        PUT_PTR(NEXT_PTR(PREV(bp)),NULL);
     }else{
          free_list[pos] = NULL;
     }
@@ -396,7 +396,7 @@ static void *find_fit(size_t asize){
             break;
         }
     }
-    return ptr;
+    return cur;
 }
 
 
