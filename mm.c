@@ -71,15 +71,15 @@ team_t team = {
 #define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 /* Pointer of free block's next and pre block in free list */
-#define PREV(bp) (*(char **)(bp))
-#define NEXT(bp) (*(char **)(NEXT_PTR(bp)))
+#define NEXT(bp) (*(char **)(bp))
+#define PREV(bp) (*(char **)(PREV_PTR(bp)))
 
 /* Address stored in the free block's next and pre block*/
-#define PREV_PTR(bp)  ((char *)(bp))
-#define NEXT_PTR(bp)  ((char *)(bp) + WSIZE)
+#define NEXT_PTR(bp)  ((char *)(bp))
+#define PREV_PTR(bp)  ((char *)(bp) + WSIZE)
 
 /* Set the value stored in p into ptr */
-#define PUT_PTR(p, ptr) (*(char *)p = (char )ptr )
+#define PUT_PTR(p, ptr) (*(unsigned int *)p = (unsigned int )ptr )
 
 #define MAX_list 32
 
@@ -154,17 +154,10 @@ static void *extend_heap(size_t words){
  */
 void *mm_malloc(size_t size)
 {
-//    int newsize = ALIGN(size + SIZE_T_SIZE);
-//    void *p = mem_sbrk(newsize);
-//    if (p == (void *)-1)
-//    return NULL;
-//    else {
-//        *(size_t *)p = size;
-//        return (void *)((char *)p + SIZE_T_SIZE);
-//    }
+
     size_t asize; /* Adjusted block size */
     size_t extendsize; /* Amount to extend heap if no fit*/
-    char *bp;
+    void *bp = NULL;
     
     /* Ignore spurious requests */
     if(size == 0){
@@ -235,9 +228,9 @@ static void *coalesce(void *bp){
     
     else{
         delete(bp);
-        delete(NEXT_BLKP(bp));
         delete(PREV_BLKP(bp));
-        size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(FTRP(NEXT_BLKP(bp)));
+        delete(NEXT_BLKP(bp));
+        size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(PREV_BLKP(bp)),PACK(size, 0));
         PUT(FTRP(NEXT_BLKP(bp)),PACK(size, 0));
         bp = PREV_BLKP(bp);
@@ -299,17 +292,18 @@ void *mm_realloc(void *ptr, size_t size)
 
 /* place the requested block at the beginning of the free block, splitting only if the size of the remainder would equal or exceed the mini- mum block size. */
 static void place(void *bp, size_t size){
-    delete(bp);
+
     size_t temp = GET_SIZE(HDRP(bp));
+        delete(bp);
     
-    if((temp - size) < 2 * DSIZE){
+    if((temp - size) <= 2 * DSIZE){
         PUT(HDRP(bp), PACK(temp), 1));
         PUT(FTRP(bp), PACK(temp), 1));
     }else{
-        PUT(HDRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
-        PUT(FTRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
         PUT(HDRP(bp),PACK(size, 1));
         PUT(FTRP(bp),PACK(size, 1));
+        PUT(HDRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
+        PUT(FTRP(NEXT_BLKP(bp)),PACK((temp - size), 0));
         insert(NEXT_BLKP(bp), (temp - size));
     }
 }
@@ -381,10 +375,8 @@ static void delete(void *bp){
 static void *find_fit(size_t asize){
     int pos = 0;
     size_t temp = asize;
-    char *cur;
-    
-    while (pos < MAX_list -1){
-        if()
+    void *cur;
+    while (pos < MAX_list -1 && temp > 1){
         temp = temp >> 1;
         pos ++;
     }
@@ -400,15 +392,3 @@ static void *find_fit(size_t asize){
     }
     return ptr;
 }
-
-
-
-
-
-
-
-
-
-
-
-
