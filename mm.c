@@ -234,9 +234,9 @@ static void *mm_realloc(void *ptr, size_t size)
  * find_fit - Find a fit for a block with asize bytes 
  */
 static void *find_fit(size_t asize){
-	*bp = NULL;
+	char *bp;
 	for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
-		if(GET_SIZE(HDRP(bp)) >= asize) {
+		if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= asize) {
 			return bp;
 		}
 	}
