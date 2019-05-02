@@ -79,7 +79,7 @@ team_t team = {
 #define NEXT_PTR(bp)  ((char *)(bp) + WSIZE)
 
 /* Set the value stored in p into ptr */
-#define PUT_PTR(p, ptr) (*(char *)p = (char )ptr )
+#define PUT_PTR(p, ptr) (*(unsigned int *)p = (unsigned int )ptr )
 
 #define MAX_list 32
 
@@ -177,16 +177,15 @@ void *mm_malloc(size_t size)
     }else{
         asize = DSIZE * ((size +(DSIZE) + (DSIZE - 1)) / DSIZE);
     }
-    
+
     /* Search the free list for a fit */
     if ((bp = find_fit(asize)) != NULL) {
         place(bp,asize);
         return bp;
     }
-    
     /* No fit found. Get more menmory and place the block */
     extendsize = MAX(asize,CHUNKSIZE);
-    if ((bp = extend_heap(extendsize/WSIZE)) == NULL) {
+    if ((bp = extend_heap(extendsize)) == NULL) {
         return NULL;
     }
     place(bp,asize);
@@ -317,8 +316,8 @@ static void place(void *bp, size_t size){
 static void insert(void *bp, size_t size){
     int pos = 0;
     size_t temp = size;
-    void *cur;
-    void *pre;
+    void *cur = bp;
+    void *pre = NULL;
     
     // select the correct list to insert the block
     while (pos < MAX_list -1 && temp > 1){
@@ -381,18 +380,19 @@ static void *find_fit(size_t asize){
     int pos = 0;
     size_t temp = asize;
     char *cur;
-    
+
     while (pos < MAX_list -1 && temp > 1){
         temp = temp >> 1;
         pos ++;
     }
-    
+
     for(; pos < MAX_list; pos++){
         cur = free_list[pos];
         while ( cur != NULL && asize > GET_SIZE(HDRP(cur)) ){
                     cur = NEXT(cur);
         }
         if(cur != NULL){
+        printf("macccccccccccccccc");
             break;
         }
     }
