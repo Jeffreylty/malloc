@@ -379,24 +379,23 @@ static void delete(void *bp){
 static void *find_fit(size_t asize){
     int pos = 0;
     size_t temp = asize;
-    char *cur;
+    void *cur = NULL;
+    
+    while (pos < MAX_list -1){
+        if((pos == MAX_list -1) || ((temp <=1 ) && (free_list[pos] != NULL)){
+            cur = free_list[pos];
+            while((cur != NULL) && ((asize > GET_SIZE(HDRP(cur))))){
+                            cur = NEXT(cur);
+            }
+            if(cur != NULL)
+                break;
+        }
+           temp >>=1;
+           pos++;
 
-    while (pos < MAX_list -1 && temp > 1){
-        temp = temp >> 1;
-        pos ++;
     }
 
-    for(; pos < MAX_list; pos++){
-        cur = free_list[pos];
-        while ( cur != NULL && asize > GET_SIZE(HDRP(cur)) ){
-                    cur = NEXT(cur);
-        }
-        if(cur != NULL){
-        printf("macccccccccccccccc");
-            break;
-        }
-    }
-    return cur;
+           return pos;
 }
 
 
