@@ -78,6 +78,7 @@ static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
 static void *place(void *bp, size_t size);
+static void *find_fit(size_t asize)
 
 /* 
  * mm_init - initialize the malloc package.
@@ -212,7 +213,7 @@ static void *coalesce(void *bp){
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
-void *mm_realloc(void *ptr, size_t size)
+static void *mm_realloc(void *ptr, size_t size)
 {
     void *oldptr = ptr;
     void *newptr;
@@ -229,7 +230,18 @@ void *mm_realloc(void *ptr, size_t size)
     return newptr;
 }
 
-
+/* 
+ * find_fit - Find a fit for a block with asize bytes 
+ */
+static void *find_fit(size_t asize){
+	*bp = NULL;
+	for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+		if(GET_SIZE(HDRP(bp)) >= asize) {
+			return bp;
+		}
+	}
+	return NULL;
+}
 
 
 
