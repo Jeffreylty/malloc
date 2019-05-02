@@ -6,69 +6,45 @@ void *mm_realloc(void *ptr, size_t size)
     size_t asize = size;    /* Size of new block */
     void *newptr = ptr;        /* Ptr to the result block */
     
-    /* If size == 0 then this is just free, and we return NULL. */
+    // If size == 0 then this is just free, and we return NULL
     if (size == 0) {
         mm_free(ptr);
         return NULL;
      }
      
-     /* If oldptr is NULL, then this is just malloc. */
+    // If oldptr is NULL, then this is just malloc
     if(ptr == NULL) {
         return mm_malloc(size);
     }
 
-    /* Adjust block size to include overhead and alignment reqs. */
+    // Adjust block size to include overhead and alignment reqs
     if (asize <= DSIZE) {
         asize = 2 * DSIZE;
     }else {
         asize = ALIGN(size + DSIZE);
     }
-
-    /* Add overhead requirements to block size */
-    asize += (1<<7);
-
-    /* Calculate block buffer */
-    buffersize = GET_SIZE(HDRP(bp)) - asize;
-
-    /* Extend if overhead falls below the minimum */
-    if (buffersize < 0){
-
-        /* If next block is free or epilogue */
-        if (!GET_ALLOC(HDRP(NEXT_BLKP(bp))) || !GET_SIZE(HDRP(NEXT_BLKP(bp)))){
-
-            /* Combine the size of those two blocks and compare with asize*/
-            remainsize = GET_SIZE(HDRP(bp)) + GET_SIZE(HDRP(NEXT_BLKP(bp))) - asize;
-
-            /* Extend if necessary */
-            if (remainsize < 0){
-                extendsize = MAX(-remainsize, CHUNKSIZE);
-                if (extend_heap(extendsize) == NULL)
-                    return NULL;
-                remainsize += extendsize;
-            }
-
-            delete(NEXT_BLKP(bp));
-
-            /* Change header and footer */
-            PUTNOTAG(HDRP(bp), PACK(asize + remainsize, 1));
-            PUTNOTAG(FTRP(bp), PACK(asize + remainsize, 1));
+    
+    // Return the original ptr if size is less than the original
+    if (GET_SIZE(HDRP(ptr)) >= size) {
+        return ptr;
+    // When next block is free or is end
+    }else if(!GET_ALLOC(HDRP(NEXT_BLKP(ptr))) || !GET_SIZE(HDRP(NEXT_BLKP(ptr)))) {
+        // Need extend the block
+        int diff = GET_SIZE(HDRP(ptr)) + GET_SIZE(HDRP(NEXT_BLKP(ptr))) - size;
+        if(diff < 0) {
+            if (extend_heap(MAX(-diff, 1<<12)) == NULL)   return NULL;
+            diff += MAX(-remainder, 1<<12);
         }
-
-        /* If next block is not free or epilogue */
-        else{
-            newp = mm_malloc(asize - DSIZE);    /* malloc for new size */
-            memcpy(newp, bp, MIN(size, asize)); /* Copy the content to the new block */
-            mm_free(bp);                        /* Free the old block */
-        }
-
-        /* Update block buffer */
-        buffersize = GET_SIZE(HDRP(newp)) - asize;
+        
+        delete_node(NEXT_BLKP(ptr));
+        PUT(HDRP(ptr), PACK(asize + diff, 1));
+        PUT(FTRP(ptr), PACK(asize + diff, 1));
+    // Use new free block
+    }else {
+        newptr = mm_malloc(asize);
+        memcpy(new_block, ptr, GET_SIZE(HDRP(ptr)));
+        mm_free(ptr);
     }
 
-    /* Tag the next block if block overhead drops below twice the overhead */
-    if (buffersize < 2*(1<<7))
-        SET_TAG(HDRP(NEXT_BLKP(newp)));
-
-    mm_check(check);
-    return newp;
+    return newptr;
 }
