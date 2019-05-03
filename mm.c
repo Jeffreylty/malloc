@@ -466,7 +466,7 @@ static void *find_fit(size_t asize) {
 static int mm_check() {
 	void * ptr ,*ptr2;
 	int count1 = 0; // count the number of free block in heap
-	int count2 = 0; // count the number of ree block in free list
+	int count2 = 0; // count the number of free block in free list
  	for(ptr = heap_listp; GET_SIZE(HDRP(ptr))>0 ; ptr = NEXT_BLKP(ptr) ){
 		if(GET_SIZE(HDRP(ptr))!= GET_SIZE(FTRP(ptr)) || GET_ALLOC(HDRP(ptr))!= GET_ALLOC(FTRP(ptr))){
 			printf("WARNING: Inconsistent header and footer\n");
