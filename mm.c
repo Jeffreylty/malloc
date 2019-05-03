@@ -11,21 +11,21 @@
  *
  *  The free list is a set of double linked lists, sorted by the 
  *  size of the block, with a following structure
- *      ———————————————————————
+ *     ———————————————————————
  *     |  |  |  |  |  |  |  |  |
  *     ———————————————————————
  *      /\ /\ /\
  *      |  |  |
- *     \/ \/ \/
- *     ——
- *    |  |
- *     ——
- *     /\ 
- *     |
- *    \/
- *    ——
- *   |  |
- *    ——
+ *      \/ \/ \/
+ *      ——
+ *     |  |
+ *      ——
+ *      /\ 
+ *      |
+ *      \/
+ *      ——
+ *     |  |
+ *      ——
  *
  *  Whenever we freed a block or extend the heap, we insert it into segregated free list;
  *  Whenever we try to allocate a memory of size n, we traverse the free list,
