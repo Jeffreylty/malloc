@@ -1,13 +1,37 @@
 /*
- * mm-naive.c - The fastest, least memory-efficient malloc package.
- * 
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  A block is pure payload. There are no headers or
- * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
+ * In our mm approach, a block has a following structure
+ *      
+ *      |    head     |
+ *      ———————
+ *      |   payload   |
+ *      ———————
+ *      |   padding   |
+ *      ———————
+ *      |    foot     |
  *
- * NOTE TO STUDENTS: Replace this header comment with your own header
- * comment that gives a high level description of your solution.
+ *  The free list is a set of double linked lists, sorted by the 
+ *  size of the block, with a following structure
+ *     ———————————————————————
+ *     |  |  |  |  |  |  |  |  |
+ *     ———————————————————————
+ *      /\ /\ /\
+ *      |  |  |
+ *      \/ \/ \/
+ *      ——
+ *     |  |
+ *      ——
+ *      /\ 
+ *      |
+ *      \/
+ *      ——
+ *     |  |
+ *      ——
+ *
+ *  Whenever we freed a block or extend the heap, we insert it into segregated free list;
+ *  Whenever we try to allocate a memory of size n, we traverse the free list,
+ *  find a free block and delete it from the free list.
+ * 
+ *
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -153,7 +177,7 @@ static void *extend_heap(size_t words) {
 
 /* 
  * mm_malloc - Allocate a block by incrementing the brk pointer.
- *     Always allocate a block whose size is a multiple of the alignment.
+ *     Always allocate a block whose size is a multiple of the alignm`ent.
  */
 void *mm_malloc(size_t size) {
 
@@ -185,7 +209,8 @@ void *mm_malloc(size_t size) {
         return NULL;
     }
     bp = place(bp, asize);
-	//mm_check();
+  
+	  //mm_check();
     return bp;
 }
 
@@ -230,7 +255,7 @@ static void *coalesce(void *bp){
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }else { /* case4 */
-    	/* Delete the current block, the next blcok, and the previous block from the free list, and 			coalease them together. */
+    	/* Delete the current block, the next blcok, and the previous block from the free list, and coalease them together. */
         delete(bp);
         delete(PREV_BLKP(bp));
         delete(NEXT_BLKP(bp));
@@ -241,22 +266,22 @@ static void *coalesce(void *bp){
     }
 
     insert(bp, size);
-	//mm_check();
+	  //mm_check();
     return bp;
 }
 
 /*
- * mm_realloc - Implemented simply in terms of mm_malloc and mm_free.
+ * mm_realloc - Implemented in terms of mm_malloc and mm_free.
  */
 void *mm_realloc(void *ptr, size_t size) {
     size_t asize = size;    /* Size of new block */
     void *newptr = ptr;        /* Ptr to the result block */
     
-    // If size == 0 then this is just free, and we return NULL
+    // If size == 0 then return NULL
     if(size == 0)
         return NULL;
 
-	// If oldptr is NULL, then this is just malloc
+	  // If oldptr is NULL, then this is just malloc
     if(ptr == NULL)
         return mm_malloc(size);
     
@@ -477,4 +502,3 @@ static int mm_check() {
 	}
 		return 1;
 }
-
