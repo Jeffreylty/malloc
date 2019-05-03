@@ -109,7 +109,7 @@ team_t team = {
 #define MAX_list 20
 
 /* Variables */
-void * heap_listp;  /* Head pointer of the heap */
+void * heap_listp;	/* Head pointer of the heap */
 void **free_list;   /* List of free pointer */
 
 /*Functions */
@@ -119,6 +119,7 @@ static void *find_fit(size_t asize);
 static void *place(void *bp, size_t size);
 static void insert(void *bp, size_t size);
 static void delete(void *bp);
+static int mm_check(void);
 
 /* 
  * mm_init - initialize the malloc package.
@@ -208,6 +209,8 @@ void *mm_malloc(size_t size) {
         return NULL;
     }
     bp = place(bp, asize);
+  
+	  //mm_check();
     return bp;
 }
 
@@ -222,6 +225,7 @@ void mm_free(void *ptr) {
     /* Put the freed blcok into the segregated free list*/
     insert(ptr, size);
     coalesce(ptr);
+	//mm_check();
 }
 
 /*
@@ -262,6 +266,7 @@ static void *coalesce(void *bp){
     }
 
     insert(bp, size);
+	  //mm_check();
     return bp;
 }
 
@@ -276,7 +281,7 @@ void *mm_realloc(void *ptr, size_t size) {
     if(size == 0)
         return NULL;
 
-	// If oldptr is NULL, then this is just malloc
+	  // If oldptr is NULL, then this is just malloc
     if(ptr == NULL)
         return mm_malloc(size);
     
@@ -287,6 +292,7 @@ void *mm_realloc(void *ptr, size_t size) {
         asize = ALIGN(size + DSIZE);
     }
  
+
     // Return the original ptr if size is less than the original
     if(GET_SIZE(HDRP(ptr)) >= asize) {
         return ptr;
@@ -308,13 +314,12 @@ void *mm_realloc(void *ptr, size_t size) {
         memcpy(newptr, ptr, GET_SIZE(HDRP(ptr)));
         mm_free(ptr);
     }
-    
+    //mm_check();
     return newptr;
 }
 
 /* 
- * place - Place the requested block at the beginning of the free block,
- *		   splitting only if the size of  
+ * place - Place the requested block at the beginning of the free block, splitting only if the size of  
  *         the remainder would equal or exceed the minimum block size. 
  */
 static void *place(void *bp, size_t size) {
@@ -446,4 +451,54 @@ static void *find_fit(size_t asize) {
         }
     }
     return cur;
+}
+
+/* 
+ * mm_check - Check the consistency of the free list and the heap.
+	We cecked the following:
+    Is every block in the free list marked as free? 
+    Are there any contiguous free blocks that somehow escaped coalescing? 
+    Is every free block actually in the free list? 
+    Do the pointers in the free list point to valid free blocks? 
+    Do any allocated blocks overlap? 
+    Do the pointers in a heap block point to valid heap addresses?  
+ */
+static int mm_check() {
+	void * ptr ,*ptr2;
+	int count1 = 0; // count the number of free block in heap
+	int count2 = 0; // count the number of ree block in free list
+ 	for(ptr = heap_listp; GET_SIZE(HDRP(ptr))>0 ; ptr = NEXT_BLKP(ptr) ){
+		if(GET_SIZE(HDRP(ptr))!= GET_SIZE(FTRP(ptr)) || GET_ALLOC(HDRP(ptr))!= GET_ALLOC(FTRP(ptr))){
+			printf("WARNING: Inconsistent header and footer\n");
+			return 0;
+		}
+		if(!GET_ALLOC(HDRP(ptr))) count1++;
+
+		if(HDRP(ptr) + GET_SIZE(HDRP(ptr)) -1 >= HDRP(NEXT_BLKP(ptr))){
+		printf("WARNING: Payload overlaps another payload\n");
+		return 0;
+		}
+	}
+
+	for(int i=0 ;i<MAX_list; i++) {
+        ptr2 = free_list[i];
+        while (ptr2 != NULL) {
+            if(!GET_ALLOC(HDRP(NEXT_BLKP(ptr2))) || !GET_ALLOC(HDRP(PREV_BLKP(ptr2)))) {
+                printf("WARNING: Contiguous free blocks that somehow escaped coalescing\n");
+                return 0;
+            }
+            if(GET_ALLOC(HDRP(ptr2))) {
+                printf("WARNING: An block in the free list marked as non free\n");
+                return 0;
+            }
+            count2 ++;
+            ptr2 = NEXT(ptr2);
+        }
+    }
+
+	if(count2 != count1) {
+		printf("WARNING: Not every free block actually in the free list\n");
+		return 0;
+	}
+		return 1;
 }
