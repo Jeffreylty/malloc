@@ -1,10 +1,37 @@
 /*
- * 
- * 
  * In our mm approach, a block has a following structure
+ *      
+ *      |    head     |
+ *      ———————
+ *      |   payload   |
+ *      ———————
+ *      |   padding   |
+ *      ———————
+ *      |    foot     |
  *
+ *  The free list is a set of double linked lists, sorted by the 
+ *  size of the block, with a following structure
+ *      ———————————————————————
+ *     |  |  |  |  |  |  |  |  |
+ *     ———————————————————————
+ *      /\ /\ /\
+ *      |  |  |
+ *     \/ \/ \/
+ *     ——
+ *    |  |
+ *     ——
+ *     /\ 
+ *     |
+ *    \/
+ *    ——
+ *   |  |
+ *    ——
+ *
+ *  Whenever we freed a block or extend the heap, we insert it into segregated free list;
+ *  Whenever we try to allocate a memory of size n, we traverse the free list,
+ *  find a free block and delete it from the free list.
  * 
- * 
+ *
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -224,7 +251,7 @@ static void *coalesce(void *bp){
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }else { /* case4 */
-    	/* Delete the current block, the next blcok, and the previous block from the free list, and 			coalease them together. */
+    	/* Delete the current block, the next blcok, and the previous block from the free list, and coalease them together. */
         delete(bp);
         delete(PREV_BLKP(bp));
         delete(NEXT_BLKP(bp));
